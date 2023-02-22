@@ -22,7 +22,7 @@ void loop()
 {
   // Collect data from analog input pin 0
   raw_value = analogRead(A0);
-  voltage_value = map(raw_value, 502, 752, 700, 1050);
+  voltage_value = map(raw_value, 461, 620, 700, 1000);
   voltage_value /= 100;
 
   // Display our message on the serial monitor

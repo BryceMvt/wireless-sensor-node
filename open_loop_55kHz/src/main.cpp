@@ -28,7 +28,7 @@ void setup()
   // Using the analogWrite() is a nice abstraction that has the same effect as manually setting up a pin's output compare register.
   // Duty Cycle D = (second argument of analogWrite + 1) / (TOP + 1)
   // For this example, D will equal 0.5, so we set the second argument of analogWrite to 146
-  analogWrite(9, 146);
+  analogWrite(9, 204);
 }
 
 void loop()
