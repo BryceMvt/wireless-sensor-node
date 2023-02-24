@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "closed loop PWM Milestone 2 Deliverable 2",
+			"path": "../../Projects/closed loop PWM Milestone 2 Deliverable 2"
+		},
+		{
+			"path": "../open_loop_55kHz"
+		}
+	],
+	"settings": {}
+}
