@@ -33,7 +33,7 @@ void loop()
   Serial.print(voltage_value);
   Serial.print("V\n");
 
-  // Wait a reasonable amount of time before repeating the process
+  // Wait a reasonable amount of time before remeasuring
   delay(200);
 }
 
