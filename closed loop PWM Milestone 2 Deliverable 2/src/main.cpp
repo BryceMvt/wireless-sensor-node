@@ -28,10 +28,10 @@ double error[error_length]{};
 
 // When using the analogRead() function for our voltage divider with 5.6V zener diode protection:
 //  - The 10-bit value 616 maps to 10.00V (found using our DC bench power supply)
-const int ten_volt_byte{616};
+const int ten_volt_byte{618}; // 616, 618
 
 //  - The 10-bit value 461 maps to  7.00V
-const int seven_volt_byte{461};
+const int seven_volt_byte{461}; // 461
 
 // We must limit the allowed duty cycle values using the constrain function to avoid the possibility of getting a positive feedback.
 // The following minimum and maximum allowed duty cycles were determined experimentally using our open-loop boost converter.
