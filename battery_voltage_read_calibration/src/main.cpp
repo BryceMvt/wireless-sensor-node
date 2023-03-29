@@ -34,7 +34,7 @@ void loop()
   Serial.print("V\n");
 
   // Wait a reasonable amount of time before remeasuring
-  delay(200);
+  delay(1000);
 }
 
 // Bryce's lab-kit UNO with a 100k + 180k ohm voltage divider:
