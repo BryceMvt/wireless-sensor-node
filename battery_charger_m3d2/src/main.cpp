@@ -4,6 +4,7 @@
 // The variables update_period, error_length, and integral gain can be used to tune the behavior of our integral feedback loop
 
 #include <Arduino.h>
+#include <SoftwareSerial.h>
 
 // Constants and Global Variables:
 
@@ -23,17 +24,21 @@ const int top_pin{A1};
 const int thermistor_pin{A2};
 
 // ADC voltage divider reference numbers
-const int top_ten_point_two{730}; // 10.2V
-const int top_ten{715};           // 10V
-const int top_seven{500};         // 7V
+const int top_ten_point_two{662}; // 10.2V
+const int top_ten{652};           // 10V
+const int top_seven{479};         // 7V
 
-const int battery_ten_point_two{734}; // 10.2V
-const int battery_ten{703};           // 10V
-const int battery_seven{491};         // 7V
+const int battery_ten_point_two{638}; // 10.2V
+const int battery_ten{630};           // 10V
+const int battery_seven{468};         // 7V
 
 // Temperature
 double current_temperature{};               // degrees C
-const int temperature_update_period{30000}; // ms
+const int temperature_update_period{5000}; // ms
+bool temp_updated{true};
+
+// Print message
+const int print_message_period{500}; // ms
 
 // The update period of our feedback loop should be significantly longer than our boost converter's switching period
 // to allow the converter system to respond to changes in duty cycle.
@@ -52,7 +57,7 @@ double cc_mean{};
 double cv_mean{};
 
 // This is a multiplier that determines how sensitive our feedback loop is to small changes in measured voltage
-const double cc_integral_gain{0.04};
+const double cc_integral_gain{0.06};
 const double cv_integral_gain{0.04}; // 0.04 is good for 1ms error and 5ms duty updates
 
 // We can limit the allowed duty cycle values using the constrain function to avoid the possibility of getting a positive feedback.
@@ -73,6 +78,7 @@ unsigned long previous_error_millis{};
 unsigned long previous_duty_cycle_millis{};
 unsigned long previous_temperature_millis{};
 unsigned long previous_charge_mode_change_millis{};
+unsigned long previous_print_message_millis{};
 
 // Stores the most recently updated mean value of the error arrays
 double cc_current_mean{};
@@ -93,6 +99,15 @@ charging_scheme current_charging_scheme{CONSTANT_VOLTAGE};
 // Real-time voltages
 double top_voltage{};
 double battery_voltage{};
+double battery_current{};
+
+// Bluetooth stuff
+const int rx_pin{2};
+const int tx_pin{3};
+
+SoftwareSerial bluetooth(rx_pin, tx_pin);
+
+
 
 // This function replaces the oldest output-voltage error reading with a fresh one
 void update_cv_error_array()
@@ -100,8 +115,14 @@ void update_cv_error_array()
   // This value keeps track of the oldest output voltage reading
   static int cv_error_index{}; // the static modifier is useful because we want to reference it in future function calls like a global variable.
 
-  int top_voltage = analogRead(top_pin);
   cv_error[cv_error_index] = top_ten_point_two - top_voltage;
+
+  top_voltage = map(top_voltage, top_seven, top_ten, 7000, 10000);
+  battery_voltage = map(battery_voltage, battery_seven, battery_ten, 7000, 10000);
+  battery_current = (top_voltage - battery_voltage) / load_resistance;
+
+  top_voltage /= 1000;
+  battery_voltage /= 1000;
 
   // Update the error_index according to the error array length error_length
   if (!(cv_error_index < cv_error_length))
@@ -119,13 +140,13 @@ void update_cc_error_array()
   // This value keeps track of the oldest output voltage reading
   static int cc_error_index{}; // the static modifier is useful because we want to reference it in future function calls like a global variable.
 
-  double battery_current{};
-
   top_voltage = map(top_voltage, top_seven, top_ten, 7000, 10000);
   battery_voltage = map(battery_voltage, battery_seven, battery_ten, 7000, 10000);
-
   battery_current = (top_voltage - battery_voltage) / load_resistance;
 
+  top_voltage /= 1000;
+  battery_voltage /= 1000;
+  
   cc_error[cc_error_index] = cc_set_point - battery_current;
 
   // Update the error_index according to the error array length error_length
@@ -235,7 +256,8 @@ double measure_temperature(int thermistor_pin)
 void setup()
 {
 
-  //Serial.begin(115200);
+  Serial.begin(115200);
+  bluetooth.begin(9600);
 
   // We modify the following register to:
   //  - Set the wave generation mode to mode 14 (fast PWM with TOP defined by the ICR1 register) (bits 1 and 0 of the 4-bit substring)
@@ -281,7 +303,7 @@ void loop()
     case CONSTANT_CURRENT:
       update_cc_error_array();
       update_cc_error_mean();
-      if (battery_voltage < battery_ten_point_two)
+      if (battery_voltage < 10.2)
       {
         previous_charge_mode_change_millis = current_millis;
       }
@@ -297,7 +319,7 @@ void loop()
     case CONSTANT_VOLTAGE:
       update_cv_error_array();
       update_cv_error_mean();
-      if (battery_voltage > battery_ten_point_two)
+      if (battery_voltage > 10.15)
       {
         previous_charge_mode_change_millis = current_millis;
       }
@@ -332,7 +354,52 @@ void loop()
   {
     // Update the temperature
     current_temperature = measure_temperature(thermistor_pin);
+    temp_updated = true;
 
     previous_temperature_millis = current_millis;
+  }
+
+    if (!((current_millis - previous_print_message_millis) < print_message_period)) // Executes if an entire print_message_period has passed
+  {
+    // Print a message to the serial monitor
+    
+    Serial.print("Mode: ");
+
+    if (current_charging_scheme == CONSTANT_CURRENT)
+    {
+      Serial.print("Current\t");
+    }
+    else
+    {
+      Serial.print("Voltage\t");
+    }
+
+    Serial.print("V_top: ");
+    Serial.print(top_voltage, 2);
+    Serial.print(" V\t");
+
+    Serial.print("V_bat: ");
+    Serial.print(battery_voltage, 2);
+    Serial.print(" V\t");
+
+    Serial.print("I_bat: ");
+    Serial.print(battery_current, 2);
+    Serial.print(" mA\t");
+
+    if(temp_updated)
+    {
+      bluetooth.print("Temperature: ");
+      bluetooth.print(current_temperature, 2);
+      bluetooth.print("C\n");
+
+      Serial.print("Temp: ");
+      Serial.print(current_temperature, 2);
+      Serial.print(" C\t");
+      temp_updated = false;
+    }
+
+    Serial.print("\n");
+
+    previous_print_message_millis = current_millis;
   }
 }

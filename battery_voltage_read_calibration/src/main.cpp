@@ -22,7 +22,7 @@ void loop()
 {
   // Collect data from analog input pin 0
   raw_value = analogRead(A0);
-  voltage_value = map(raw_value, 500, 715, 700, 1000);
+  voltage_value = map(raw_value, 479, 652, 700, 1000);
   voltage_value /= 100;
 
   // Display our message on the serial monitor
@@ -40,3 +40,7 @@ void loop()
 // Bryce's lab-kit UNO with a 100k + 180k ohm voltage divider:
 // - 7.00V  source analogRead() output is 502
 // - 10.50V source analogRead() output is 753
+
+// Milestone 3,4 with zener diodes
+// - A0: 7V = 468, 10V = 630, 10.2V = 638
+// - A1: 7V = 479, 10V = 652, 10.2V = 662
