@@ -21,8 +21,8 @@ void setup()
 void loop()
 {
   // Collect data from analog input pin 0
-  raw_value = analogRead(A0);
-  voltage_value = map(raw_value, 479, 652, 700, 1000);
+  raw_value = analogRead(A3);
+  voltage_value = map(raw_value, 479, 652, 400, 500);
   voltage_value /= 100;
 
   // Display our message on the serial monitor
