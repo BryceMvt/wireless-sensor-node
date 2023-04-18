@@ -36,7 +36,7 @@ const int v_in_4V{823}; // 4V on A3 with the zener diode
 
 // Temperature
 double current_temperature{};              // degrees C
-const int temperature_update_period{5000}; // ms
+const int temperature_update_period{2000}; // ms
 bool temp_updated{true};
 
 // Print message
@@ -72,6 +72,9 @@ const int d_max{188}; // Corresponds to an approximate duty cycle of D = 0.65
 // We require a cooldown period before the charger is able to change charging schemes for stability.
 const int mode_change_cooldown_duration{10000};
 
+// A similar period is imposed when going to sleep from the awake state
+const int sleep_enter_cooldown_duration{2000};
+
 // We use the millis functionality for simplicity
 unsigned long current_millis{};
 
@@ -81,6 +84,7 @@ unsigned long previous_duty_cycle_millis{};
 unsigned long previous_temperature_millis{};
 unsigned long previous_charge_mode_change_millis{};
 unsigned long previous_print_message_millis{};
+unsigned long previous_sleep_enter_millis{};
 
 // Stores the most recently updated mean value of the error arrays
 double cc_current_mean{};
@@ -111,8 +115,8 @@ double battery_voltage{};
 double battery_current{};
 
 // Bluetooth stuff
-const int rx_pin{2};
-const int tx_pin{3};
+const int rx_pin{7};
+const int tx_pin{8};
 
 SoftwareSerial bluetooth(rx_pin, tx_pin);
 
@@ -284,6 +288,7 @@ void sleep_30s()
 
   // Disable the ADC (large power savings)
   ADCSRA &= ~(_BV(ADEN));
+  PRR |= _BV(PRADC);
 
   // Enable sleep mode
   SMCR |= _BV(SE);
@@ -338,6 +343,7 @@ void sleep_30s()
   SMCR &= ~(_BV(SE));
 
   // Enable the ADC (important for temp measurement and boost converter)
+  PRR &= ~(_BV(PRADC));
   ADCSRA |= _BV(ADEN);
 }
 
@@ -436,7 +442,19 @@ void awake_routine()
     {
       bluetooth.print("Temp: ");
       bluetooth.print(current_temperature, 2);
-      bluetooth.print("C\n");
+
+      bluetooth.print("C    AWAKE: CONST ");
+
+      if (current_charging_scheme == CONSTANT_CURRENT)
+      {
+        bluetooth.print("CURRENT");
+      }
+      else
+      {
+        bluetooth.print("VOLTAGE");
+      }
+
+      bluetooth.print("\n");
       temp_updated = false;
     }
 
@@ -445,6 +463,13 @@ void awake_routine()
 
   if (vin_is_at_least_4V())
   {
+    previous_sleep_enter_millis = current_millis;
+  }
+  else if (!((current_millis - previous_sleep_enter_millis) < sleep_enter_cooldown_duration))
+  {
+    // Enter sleep state
+    wipe_cc_array();
+    wipe_cv_array();
     current_power_mode = ASLEEP;
     stop_boost_pwm();
   }
@@ -458,7 +483,7 @@ void asleep_routine()
   // Send the temperature data over bluetooth
   bluetooth.print("Temp: ");
   bluetooth.print(current_temperature, 2);
-  bluetooth.print("C\n");
+  bluetooth.print("C    SLEEP\n");
 
   // Sleep for 30 seconds
   sleep_30s();
@@ -472,6 +497,7 @@ void asleep_routine()
     sei();                                     // Enable interrupts once more
 
     current_power_mode = AWAKE;
+    current_charging_scheme = CONSTANT_VOLTAGE;
     start_boost_pwm();
   }
 }
@@ -480,6 +506,9 @@ void setup()
 {
   // Set the MCU sleep mode to "power down" mode. It's the only mode we use.
   SMCR = (SMCR & ~(_BV(SM0) | _BV(SM1) | _BV(SM2))) | _BV(SM1);
+
+  // Power reduction register (PRR): We never use TWI (I2C), nor do we use Timer2
+  PRR = _BV(PRTWI) | _BV(PRTIM2);
 
   // Timer1 configuration for our boost converter PWM
   TCCR1A = _BV(COM1A1) | _BV(WGM11); // Set the wavegen mode to "fast PWM" (mode 14) and set the output compare mode to "non-inverting" (mode 2) (UNO board pin 9)
@@ -499,10 +528,6 @@ void setup()
 
     current_power_mode = AWAKE;
     start_boost_pwm();
-  }
-  else
-  {
-    current_power_mode = ASLEEP;
   }
 }
 
