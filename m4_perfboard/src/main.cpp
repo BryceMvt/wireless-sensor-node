@@ -1,6 +1,7 @@
 // Bryce Mooney, Pengcheng Su
-// Last Modified: Bryce Mooney, 04/15/23
+// Last Modified: Bryce Mooney, 04/22/23
 // A fully functional wireless sensor node that meets all deliverables through milestone 4
+// This code is tuned for a second WSN unit implemented on a piece of perfboard.
 
 #include <Arduino.h>
 #include <SoftwareSerial.h>
@@ -18,22 +19,22 @@ const double B{0.0003677};
 const double C{-0.0000004056};
 
 // Analog read pins
-const int battery_pin{A0};
-const int top_pin{A1};
-const int thermistor_pin{A2};
-const int thermistor_source_pin{2};
-const int v_in_pin{A3};
+const int battery_pin{A4};
+const int top_pin{A3};
+const int thermistor_pin{A0};
+const int thermistor_source_pin{13};
+const int v_in_pin{A5};
 
 // ADC voltage divider reference numbers
-const int top_ten_point_two{662}; // 10.2V
-const int top_ten{652};           // 10V
-const int top_seven{479};         // 7V
+const int top_ten_point_two{657}; // 10.2V
+const int top_ten{647};           // 10V
+const int top_seven{478};         // 7V
 
-const int battery_ten_point_two{638}; // 10.2V
-const int battery_ten{630};           // 10V
-const int battery_seven{468};         // 7V
+const int battery_ten_point_two{675}; // 10.2V
+const int battery_ten{665};           // 10V
+const int battery_seven{490};         // 7V
 
-const int v_in_4V{823}; // 4V on A3 with the zener diode
+const int v_in_4V{823}; // 4V on A5 with the zener diode
 
 // Temperature
 double current_temperature{};              // degrees C
@@ -116,8 +117,8 @@ double battery_voltage{};
 double battery_current{};
 
 // Bluetooth stuff
-const int rx_pin{7};
-const int tx_pin{8};
+const int rx_pin{2};
+const int tx_pin{3};
 
 SoftwareSerial bluetooth(rx_pin, tx_pin);
 

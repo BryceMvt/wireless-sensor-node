@@ -27,11 +27,12 @@ void loop()
 
   // Display our message on the serial monitor
   Serial.print("Raw 10-bit value: ");
-  Serial.print(raw_value);
+  Serial.print(raw_value, 0);
 
-  Serial.print("\t\tCalculated Voltage: ");
-  Serial.print(voltage_value);
-  Serial.print("V\n");
+  //Serial.print("\t\tCalculated Voltage: ");
+  //Serial.print(voltage_value);
+  //Serial.print("V\n");
+  Serial.print("\n");
 
   // Wait a reasonable amount of time before remeasuring
   delay(1000);
